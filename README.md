@@ -1,1 +1,14 @@
-# orthanc66.github.io
+<!DOCTYPE html>
+<html>
+<head><title>My Site</title></head>
+<body>
+<audio id="player" autoplay loop>
+  <source src="audio.mp3" type="audio/mpeg">
+</audio>
+<script>
+  // Browsers block autoplay until user interaction, so this helps
+  const audio = document.getElementById('player');
+  document.addEventListener('click', () => audio.play());
+</script>
+</body>
+</html>
