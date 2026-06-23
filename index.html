@@ -1,13 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head><title>My Site</title></head>
-<body>
-<audio id="player" autoplay loop>
-  <source src="audio.mp3" type="audio/mpeg">
-</audio>
-<script>
-  const audio = document.getElementById('player');
-  document.addEventListener('click', () => audio.play());
-</script>
+<body style="margin:0; background:#000; display:flex; align-items:center; justify-content:center; height:100vh;">
+  <audio id="player" autoplay loop>
+    <source src="audio.mp3" type="audio/mpeg">
+  </audio>
+  <button id="btn" onclick="document.getElementById('player').play(); this.style.display='none';"
+    style="font-size:24px; padding:20px 40px; cursor:pointer;">
+    Click to Play
+  </button>
+  <script>
+    // Hide button if autoplay works
+    document.getElementById('player').play()
+      .then(() => document.getElementById('btn').style.display = 'none')
+      .catch(() => {});
+  </script>
 </body>
 </html>
