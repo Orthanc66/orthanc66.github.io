@@ -4,196 +4,193 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Goodbye Rohan</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #080B18; height: 100vh; width: 100vw; overflow: hidden; font-family: 'Cormorant Garant', serif; }
+    body { background: #080B18; height: 100vh; width: 100vw; overflow: hidden; font-family: 'Cormorant Garamond', serif; }
+    
     #c { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+    
     .center { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; transition: opacity 2s ease; }
     .center.gone { opacity: 0; pointer-events: none; }
-    .word { color: #C8C4BE; font-size: clamp(3rem,9vw,7.5rem); font-weight: 300; letter-spacing: 0.35em; text-transform: uppercase; opacity: 0; animation: fadein 4s ease forwards; }
-    .rule { width: 0; height: 1px; background: #C4823A; margin: 2.2rem auto 2rem; animation: widen 2s ease 3s forwards; }
-    .prompt { color: #4A445C; font-size: 0.75rem; letter-spacing: 0.3em; text-transform: uppercase; font-weight: 300; font-style: italic; opacity: 0; animation: fadein 2s ease 4.5s forwards; cursor: pointer; transition: color 0.6s; user-select: none; }
-    .prompt:hover { color: #8B7BA8; }
-    .prompt.gone { opacity: 0 !important; pointer-events: none; transition: opacity 1.2s ease; }
+    
+    .word { color: #C8C4BE; font-size: clamp(3rem, 9vw, 7.5rem); font-weight: 300; letter-spacing: 0.35em; text-transform: uppercase; opacity: 0; animation: fadein 2s ease forwards; }
+    .rule { width: 0; height: 1px; background: #C4823A; margin: 2.2rem auto; animation: widen 1.5s ease 1s forwards; }
+    .status { color: #4A445C; font-size: 0.75rem; letter-spacing: 0.3em; text-transform: uppercase; font-weight: 300; font-style: italic; opacity: 0; animation: fadein 1.5s ease 1.5s forwards; }
+    
     #photoOverlay { position: fixed; inset: 0; z-index: 30; opacity: 0; pointer-events: none; transition: opacity 3.5s ease; }
     #photoOverlay.visible { opacity: 1; }
     #photoOverlay img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+    
     .goodbye { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10vh; background: linear-gradient(to top, rgba(8,11,24,0.85) 0%, rgba(8,11,24,0.2) 40%, transparent 65%); }
-    .goodbye span { color: #C8C4BE; font-size: clamp(2rem,6vw,5rem); font-weight: 300; letter-spacing: 0.35em; text-transform: uppercase; opacity: 0; transition: opacity 3s ease 2s; }
+    .goodbye span { color: #C8C4BE; font-size: clamp(2rem, 6vw, 5rem); font-weight: 300; letter-spacing: 0.35em; text-transform: uppercase; opacity: 0; transition: opacity 3s ease 1s; }
     #photoOverlay.visible .goodbye span { opacity: 1; }
+
     @keyframes fadein { to { opacity: 1; } }
     @keyframes widen  { to { width: 80px; } }
-    @media (prefers-reduced-motion: reduce) {
-      .word { animation: none; opacity: 1; } .rule { animation: none; width: 80px; } .prompt { animation: none; opacity: 1; }
-    }
   </style>
 </head>
 <body>
+
   <canvas id="c"></canvas>
-  <audio id="player"><source src="audio.mp3" type="audio/mpeg"></audio>
+  <audio id="player" src="audio.mp3" preload="auto"></audio>
+
   <div class="center" id="intro">
     <div class="word">Farewell</div>
     <div class="rule"></div>
-    <div class="prompt" id="prompt" onclick="begin()">press to begin</div>
+    <div class="status" id="statusMessage">Preparing...</div>
   </div>
+
   <div id="photoOverlay">
     <img src="photo.png" alt="Rohan">
     <div class="goodbye"><span>Goodbye Rohan</span></div>
   </div>
+
   <script>
   (function () {
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
-    let phase = 'idle';
+    const audio = document.getElementById('player');
+    let phase = 'waiting'; // waiting -> raining -> goodbye
+
     function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     resize(); window.addEventListener('resize', resize);
 
+    // --- ANIMATION CLASSES (RAINING DOWN) ---
     class Mote {
-      constructor(rand) { this.reset(rand); }
-      reset(rand) {
+      constructor() { this.reset(); }
+      reset() {
         this.x = Math.random() * canvas.width;
-        this.y = rand ? Math.random() * canvas.height : canvas.height + 8;
-        this.size = Math.random() * 1.4 + 0.4;
-        this.vy = Math.random() * 0.35 + 0.08;
-        this.vx = (Math.random() - 0.5) * 0.25;
-        this.life = rand ? Math.random() : 1;
-        this.decay = Math.random() * 0.0018 + 0.0008;
-        const t = Math.random();
-        this.r = Math.round(168*(1-t)+196*t); this.g = Math.round(158*(1-t)+130*t); this.b = Math.round(192*(1-t)+100*t);
+        this.y = -10;
+        this.size = Math.random() * 1.5 + 0.5;
+        this.vy = Math.random() * 1.5 + 0.5; // Moving downward
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.life = 1;
+        this.decay = Math.random() * 0.002 + 0.001;
       }
-      update() { this.y -= this.vy; this.x += this.vx; this.life -= this.decay; }
-      draw() { ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fillStyle=`rgba(${this.r},${this.g},${this.b},${(this.life*0.55).toFixed(3)})`; ctx.fill(); }
-      dead() { return this.life<=0||this.y<-10; }
+      update() { this.y += this.vy; this.x += this.vx; this.life -= this.decay; }
+      draw() {
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(200, 196, 190, ${this.life * 0.6})`; ctx.fill();
+      }
+      dead() { return this.life <= 0 || this.y > canvas.height + 10; }
     }
 
     class Cloud {
       constructor() {
-        const left = Math.random()<0.5;
-        this.x = left ? -160 : canvas.width+160;
-        this.y = canvas.height*0.1 + Math.random()*canvas.height*0.55;
-        this.vx = left ? 0.22+Math.random()*0.2 : -(0.22+Math.random()*0.2);
-        this.vy = -(0.03+Math.random()*0.05);
-        this.s = 0.5+Math.random()*1.0; this.alpha=0; this.life=1;
-        this.decay=0.00022+Math.random()*0.00018; this.peak=0.10+Math.random()*0.08;
+        this.x = Math.random() * canvas.width;
+        this.y = -60;
+        this.vy = 0.3 + Math.random() * 0.4;
+        this.vx = (Math.random() - 0.5) * 0.2;
+        this.s = 0.4 + Math.random() * 0.6;
+        this.alpha = 0.25;
       }
-      update() { this.x+=this.vx; this.y+=this.vy; this.life-=this.decay; this.alpha=Math.min(this.peak,this.alpha+0.001)*this.life; }
+      update() { this.y += this.vy; this.x += this.vx; }
       draw() {
-        ctx.save(); ctx.globalAlpha=Math.max(0,this.alpha); ctx.translate(this.x,this.y); ctx.scale(this.s,this.s*0.6);
+        ctx.save(); ctx.globalAlpha = this.alpha; ctx.translate(this.x, this.y); ctx.scale(this.s, this.s * 0.6);
         ctx.beginPath(); ctx.arc(0,0,42,0,Math.PI*2); ctx.arc(40,-8,31,0,Math.PI*2); ctx.arc(78,0,38,0,Math.PI*2); ctx.arc(54,-30,26,0,Math.PI*2);
-        ctx.fillStyle='#C4C0D4'; ctx.fill(); ctx.restore();
+        ctx.fillStyle = '#C4C0D4'; ctx.fill(); ctx.restore();
       }
-      dead() { return this.life<=0||this.x<-500||this.x>canvas.width+500||this.y<-200; }
+      dead() { return this.y > canvas.height + 100; }
     }
 
-    const TYPES=['laptop','server','monitor','cable'];
+    const TYPES = ['laptop', 'server', 'monitor', 'cable'];
     class ITItem {
       constructor() {
-        this.x=Math.random()*canvas.width; this.y=canvas.height+60;
-        this.type=TYPES[Math.floor(Math.random()*TYPES.length)];
-        this.vy=-(0.45+Math.random()*0.5); this.vx=(Math.random()-0.5)*0.4;
-        this.angle=(Math.random()-0.5)*0.4; this.va=(Math.random()-0.5)*0.003;
-        this.s=0.8+Math.random()*0.7; this.alpha=0; this.life=1; this.decay=0.0012+Math.random()*0.001;
+        this.x = Math.random() * canvas.width; this.y = -50;
+        this.type = TYPES[Math.floor(Math.random() * TYPES.length)];
+        this.vy = 1.2 + Math.random() * 1.5; this.vx = (Math.random() - 0.5) * 0.5;
+        this.angle = Math.random() * Math.PI; this.va = (Math.random() - 0.5) * 0.03;
+        this.s = 0.7 + Math.random() * 0.5;
       }
-      update() {
-        this.y+=this.vy; this.x+=this.vx; this.angle+=this.va; this.life-=this.decay;
-        const f=this.life>0.2?1:this.life/0.2; this.alpha=Math.min(0.65,this.alpha+0.012)*f;
-      }
+      update() { this.y += this.vy; this.x += this.vx; this.angle += this.va; }
       draw() {
-        ctx.save(); ctx.globalAlpha=Math.max(0,this.alpha); ctx.translate(this.x,this.y); ctx.rotate(this.angle); ctx.scale(this.s,this.s);
-        ctx.strokeStyle='#A89EC0'; ctx.lineWidth=1.5; ctx.lineCap='round'; ctx.lineJoin='round';
+        ctx.save(); ctx.globalAlpha = 0.5; ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.scale(this.s, this.s);
+        ctx.strokeStyle = '#A89EC0'; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         switch(this.type) {
           case 'laptop':
             ctx.beginPath(); ctx.rect(-22,-28,44,28); ctx.stroke();
             ctx.beginPath(); ctx.rect(-15,-22,30,18); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(-26,0); ctx.lineTo(26,0); ctx.lineTo(24,9); ctx.lineTo(-24,9); ctx.closePath(); ctx.stroke(); break;
           case 'server':
-            for(let i=0;i<3;i++){ctx.beginPath();ctx.rect(-22,-20+i*16,44,12);ctx.stroke();ctx.beginPath();ctx.arc(14,-14+i*16,3,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(4,-14+i*16,2,0,Math.PI*2);ctx.stroke();} break;
+            for(let i=0;i<3;i++){ctx.beginPath();ctx.rect(-22,-20+i*16,44,12);ctx.stroke();ctx.beginPath();ctx.arc(14,-14+i*16,3,0,Math.PI*2);ctx.stroke();} break;
           case 'monitor':
             ctx.beginPath(); ctx.rect(-26,-26,52,38); ctx.stroke();
-            ctx.beginPath(); ctx.rect(-18,-18,36,24); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(0,12); ctx.lineTo(0,22); ctx.moveTo(-14,22); ctx.lineTo(14,22); ctx.stroke(); break;
           case 'cable':
-            ctx.beginPath(); ctx.moveTo(-22,-22); ctx.bezierCurveTo(-6,10,6,-10,22,22); ctx.stroke();
-            ctx.beginPath(); ctx.rect(-26,-26,8,6); ctx.stroke();
-            ctx.beginPath(); ctx.rect(18,20,8,6); ctx.stroke(); break;
+            ctx.beginPath(); ctx.moveTo(-22,-22); ctx.bezierCurveTo(-6,10,6,-10,22,22); ctx.stroke(); break;
         }
         ctx.restore();
       }
-      dead() { return this.life<=0||this.y<-80; }
+      dead() { return this.y > canvas.height + 60; }
     }
 
     class Cigarette {
       constructor() {
-        this.x=Math.random()*canvas.width; this.y=canvas.height+40;
-        this.vy=-(0.55+Math.random()*0.45); this.vx=(Math.random()-0.5)*0.35;
-        this.angle=(Math.random()-0.5)*0.9; this.va=(Math.random()-0.5)*0.004;
-        this.s=0.9+Math.random()*0.7; this.alpha=0; this.life=1;
-        this.decay=0.0012+Math.random()*0.001; this.t=Math.random()*Math.PI*2;
+        this.x = Math.random() * canvas.width; this.y = -40;
+        this.vy = 1.5 + Math.random() * 1.5; this.vx = (Math.random() - 0.5) * 0.4;
+        this.angle = Math.random() * Math.PI; this.va = (Math.random() - 0.5) * 0.04;
+        this.s = 0.8 + Math.random() * 0.6;
       }
-      update() {
-        this.y+=this.vy; this.x+=this.vx; this.angle+=this.va; this.life-=this.decay; this.t+=0.055;
-        const f=this.life>0.15?1:this.life/0.15; this.alpha=Math.min(0.9,this.alpha+0.015)*f;
-      }
+      update() { this.y += this.vy; this.x += this.vx; this.angle += this.va; }
       draw() {
-        ctx.save(); ctx.globalAlpha=Math.max(0,this.alpha); ctx.translate(this.x,this.y); ctx.rotate(this.angle); ctx.scale(this.s,this.s);
-        ctx.fillStyle='#E8E4DC'; ctx.beginPath(); ctx.roundRect(-2,-30,4,40,2); ctx.fill();
-        ctx.fillStyle='#C4823A'; ctx.beginPath(); ctx.roundRect(-2,10,4,12,1); ctx.fill();
-        ctx.shadowBlur=10; ctx.shadowColor='#FF6A00'; ctx.fillStyle='#FFA030';
-        ctx.beginPath(); ctx.arc(0,-31,2.5,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
-        ctx.strokeStyle='rgba(185,181,200,0.28)'; ctx.lineWidth=1.2;
-        ctx.beginPath(); ctx.moveTo(0,-33);
-        ctx.bezierCurveTo(Math.sin(this.t)*8,-47, Math.sin(this.t+1.3)*-8,-61, Math.sin(this.t+2.6)*6,-75);
-        ctx.stroke(); ctx.restore();
+        ctx.save(); ctx.globalAlpha = 0.7; ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.scale(this.s, this.s);
+        ctx.fillStyle = '#E8E4DC'; ctx.beginPath(); ctx.roundRect(-2,-30,4,40,2); ctx.fill();
+        ctx.fillStyle = '#C4823A'; ctx.beginPath(); ctx.roundRect(-2,10,4,12,1); ctx.fill();
+        ctx.fillStyle = '#FFA030'; ctx.beginPath(); ctx.arc(0,-31,2,0,Math.PI*2); ctx.fill();
+        ctx.restore();
       }
-      dead() { return this.life<=0||this.y<-90; }
+      dead() { return this.y > canvas.height + 50; }
     }
 
-    const motePool=Array.from({length:80},(_,i)=>new Mote(i<40));
-    const activeMotes=[]; const clouds=[]; const itItems=[]; const cigs=[];
+    const objects = [];
 
+    // --- MAIN LOOP ---
     function tick() {
       requestAnimationFrame(tick);
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      if(phase!=='goodbye'&&Math.random()<0.22&&motePool.length) activeMotes.push(motePool.pop());
-      if(phase==='playing'){
-        if(Math.random()<0.007) clouds.push(new Cloud());
-        if(Math.random()<0.006) itItems.push(new ITItem());
-        if(Math.random()<0.005) cigs.push(new Cigarette());
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (phase === 'raining') {
+        if (Math.random() < 0.4) objects.push(new Mote());
+        if (Math.random() < 0.015) objects.push(new Cloud());
+        if (Math.random() < 0.02) objects.push(new ITItem());
+        if (Math.random() < 0.02) objects.push(new Cigarette());
       }
-      for(let i=clouds.length-1;i>=0;i--){clouds[i].update();clouds[i].draw();if(clouds[i].dead())clouds.splice(i,1);}
-      for(let i=itItems.length-1;i>=0;i--){itItems[i].update();itItems[i].draw();if(itItems[i].dead())itItems.splice(i,1);}
-      for(let i=cigs.length-1;i>=0;i--){cigs[i].update();cigs[i].draw();if(cigs[i].dead())cigs.splice(i,1);}
-      for(let i=activeMotes.length-1;i>=0;i--){
-        const m=activeMotes[i]; m.update(); m.draw();
-        if(m.dead()){m.reset(false);motePool.push(m);activeMotes.splice(i,1);}
+
+      for (let i = objects.length - 1; i >= 0; i--) {
+        objects[i].update();
+        objects[i].draw();
+        if (objects[i].dead()) objects.splice(i, 1);
       }
     }
     tick();
 
+    // --- TIMELINE SEQUENCING ---
+    // 1. Initial 3-second wait, then start sequence
+    setTimeout(() => {
+      phase = 'raining';
+      document.getElementById('statusMessage').textContent = "Commencing...";
+      
+      // Attempt audio playback. 
+      // Note: Browsers may block audio until the user interacts with the page.
+      // If blocked, the loop catches the error and the visuals still process perfectly!
+      audio.play().catch(err => {
+        console.warn("Audio autoplay blocked by browser permissions, continuing with visual sequence.");
+        document.getElementById('statusMessage').textContent = "Click anywhere to enable audio";
+        window.addEventListener('click', () => { audio.play(); }, { once: true });
+      });
+
+      // 2. Rain items for 10 seconds, then transition to final goodbye image
+      setTimeout(showGoodbye, 10000);
+
+    }, 3000);
+
     function showGoodbye() {
-      if(phase==='goodbye') return;
-      phase='goodbye';
+      if (phase === 'goodbye') return;
+      phase = 'goodbye';
       document.getElementById('intro').classList.add('gone');
       document.getElementById('photoOverlay').classList.add('visible');
     }
-
-    function begin() {
-  const audio = document.getElementById('player');
-  document.getElementById('prompt').classList.add('gone');
-  phase = 'playing';
-
-  // Attempt to play audio, but catch errors so the site doesn't freeze
-  audio.play()
-    .then(() => {
-      audio.addEventListener('ended', showGoodbye, { once: true });
-    })
-    .catch((err) => {
-      console.warn("Audio playback failed or was blocked:", err);
-      // Fallback: If audio breaks, skip straight to the goodbye sequence after 5 seconds
-      setTimeout(showGoodbye, 5000); 
-    });
-}
   })();
   </script>
 </body>
