@@ -1,19 +1,182 @@
 <!DOCTYPE html>
-<html>
-<head><title>My Site</title></head>
-<body style="margin:0; background:#000; display:flex; align-items:center; justify-content:center; height:100vh;">
-  <audio id="player" autoplay loop>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farewell</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #080B18;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cormorant Garant', serif;
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .center {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    .word {
+      color: #C8C4BE;
+      font-size: clamp(3rem, 9vw, 7.5rem);
+      font-weight: 300;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadein 4s ease forwards;
+    }
+
+    .rule {
+      width: 0px;
+      height: 1px;
+      background: #C4823A;
+      margin: 2.2rem auto 2rem;
+      animation: widen 2s ease 3s forwards;
+    }
+
+    .prompt {
+      color: #4A445C;
+      font-size: 0.75rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      font-weight: 300;
+      font-style: italic;
+      opacity: 0;
+      animation: fadein 2s ease 4.5s forwards;
+      cursor: pointer;
+      transition: color 0.6s;
+      user-select: none;
+    }
+
+    .prompt:hover { color: #8B7BA8; }
+
+    .prompt.gone {
+      transition: opacity 1.2s ease, color 0.6s;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @keyframes fadein {
+      to { opacity: 1; }
+    }
+
+    @keyframes widen {
+      to { width: 80px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .word  { animation: none; opacity: 1; }
+      .rule  { animation: none; width: 80px; }
+      .prompt { animation: none; opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="c"></canvas>
+
+  <audio id="player" loop>
     <source src="audio.mp3" type="audio/mpeg">
   </audio>
-  <button id="btn" onclick="document.getElementById('player').play(); this.style.display='none';"
-    style="font-size:24px; padding:20px 40px; cursor:pointer;">
-    Click to Play
-  </button>
+
+  <div class="center">
+    <div class="word">Farewell</div>
+    <div class="rule"></div>
+    <div class="prompt" id="prompt" onclick="begin()">press to begin</div>
+  </div>
+
   <script>
-    // Hide button if autoplay works
-    document.getElementById('player').play()
-      .then(() => document.getElementById('btn').style.display = 'none')
-      .catch(() => {});
+    // --- Canvas particle system ---
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function Particle() {
+      this.reset();
+    }
+
+    Particle.prototype.reset = function() {
+      this.x      = Math.random() * canvas.width;
+      this.y      = canvas.height + 10;
+      this.size   = Math.random() * 1.4 + 0.4;
+      this.vy     = Math.random() * 0.35 + 0.08;
+      this.vx     = (Math.random() - 0.5) * 0.25;
+      this.life   = 1;
+      this.decay  = Math.random() * 0.0018 + 0.0008;
+      // Blend lavender toward amber
+      const t = Math.random();
+      this.r = Math.round(168 * (1 - t) + 196 * t);
+      this.g = Math.round(158 * (1 - t) + 130 * t);
+      this.b = Math.round(192 * (1 - t) + 100 * t);
+    };
+
+    const pool = Array.from({ length: 100 }, () => new Particle());
+    const active = [];
+
+    function tick() {
+      requestAnimationFrame(tick);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (Math.random() < 0.25 && pool.length) {
+        active.push(pool.pop());
+      }
+
+      for (let i = active.length - 1; i >= 0; i--) {
+        const p = active[i];
+        p.y    -= p.vy;
+        p.x    += p.vx;
+        p.life -= p.decay;
+
+        if (p.life <= 0 || p.y < -10) {
+          p.reset();
+          pool.push(p);
+          active.splice(i, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${(p.life * 0.55).toFixed(3)})`;
+        ctx.fill();
+      }
+    }
+    tick();
+
+    // --- Audio ---
+    function begin() {
+      document.getElementById('player').play();
+      document.getElementById('prompt').classList.add('gone');
+    }
+
+    // Try silent autoplay
+    document.getElementById('player').play().catch(() => {});
   </script>
 </body>
 </html>
