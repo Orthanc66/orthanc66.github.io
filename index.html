@@ -185,13 +185,6 @@
       phase='playing';
       audio.addEventListener('ended',showGoodbye,{once:true});
     }
-
-    document.getElementById('player').play()
-      .then(()=>{
-        document.getElementById('prompt').classList.add('gone');
-        phase='playing';
-        document.getElementById('player').addEventListener('ended',showGoodbye,{once:true});
-      }).catch(()=>{});
   })();
   </script>
 </body>
