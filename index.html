@@ -179,12 +179,21 @@
     }
 
     function begin() {
-      const audio=document.getElementById('player');
-      audio.play();
-      document.getElementById('prompt').classList.add('gone');
-      phase='playing';
-      audio.addEventListener('ended',showGoodbye,{once:true});
-    }
+  const audio = document.getElementById('player');
+  document.getElementById('prompt').classList.add('gone');
+  phase = 'playing';
+
+  // Attempt to play audio, but catch errors so the site doesn't freeze
+  audio.play()
+    .then(() => {
+      audio.addEventListener('ended', showGoodbye, { once: true });
+    })
+    .catch((err) => {
+      console.warn("Audio playback failed or was blocked:", err);
+      // Fallback: If audio breaks, skip straight to the goodbye sequence after 5 seconds
+      setTimeout(showGoodbye, 5000); 
+    });
+}
   })();
   </script>
 </body>
